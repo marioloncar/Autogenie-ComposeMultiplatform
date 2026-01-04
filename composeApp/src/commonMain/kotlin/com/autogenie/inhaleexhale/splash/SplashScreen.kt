@@ -44,7 +44,7 @@ fun SplashScreen(onFinished: () -> Unit) {
         initialValue = 0.6f,
         targetValue = 1.3f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2400, easing = FastOutSlowInEasing), // Breathing duration
+            animation = tween(1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "PulseAnimation"
@@ -53,7 +53,7 @@ fun SplashScreen(onFinished: () -> Unit) {
     val primaryColor = MaterialTheme.colorScheme.primary
 
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(2000)
+        kotlinx.coroutines.delay(1200)
         fadeOut = true
     }
 
