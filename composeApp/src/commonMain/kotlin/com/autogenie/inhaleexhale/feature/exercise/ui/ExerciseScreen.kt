@@ -34,7 +34,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,7 +54,6 @@ import com.autogenie.inhaleexhale.core.util.toColor
 import com.autogenie.inhaleexhale.data.trainings.domain.model.StepType
 import com.autogenie.inhaleexhale.feature.exercise.ExerciseViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,7 +68,6 @@ fun ExerciseScreen(
     LaunchedEffect(exerciseId) { viewModel.loadExercise(exerciseId) }
 
     val haptics = LocalHapticFeedback.current
-    val scope = rememberCoroutineScope()
     val trainingUiModel by viewModel.training.collectAsState()
     val training = trainingUiModel?.training ?: run {
         LoadingScreen()
@@ -92,6 +89,8 @@ fun ExerciseScreen(
     var isCountdownFinished by remember { mutableStateOf(false) }
 
     LaunchedEffect(startExercise) {
+        countdown = 3
+        isCountdownFinished = false
         while (countdown > 0) {
             haptics.vibrateShortly()
             TTS.speak(countdown.toString())
@@ -174,7 +173,6 @@ fun ExerciseScreen(
                     currentStepIndex = 0
                 } else {
                     isRunning = false
-                    scale.snapTo(1f)
                 }
             } else {
                 currentCycle++
@@ -247,18 +245,16 @@ fun ExerciseScreen(
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     )
                 } else {
-                    TTS.speak("Exercise complete")
+                    LaunchedEffect(Unit) {
+                        TTS.speak("Exercise complete")
+                        scale.animateTo(1f)
+                    }
+
                     Text("Exercise Complete!", fontSize = 28.sp, color = MaterialTheme.colorScheme.onBackground)
                     TextButton(onClick = {
-                        scope.launch {
-                            scale.snapTo(1f)
-                        }
-
                         currentStepIndex = 0
                         currentCycle = 1
                         isRunning = true
-                        countdown = 3
-                        isCountdownFinished = false
                         startExercise = !startExercise
                     }) {
                         Text("Restart Exercise", fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
@@ -286,14 +282,14 @@ fun ExerciseScreen(
 
 @Composable
 fun PulsatingRadialBackground(baseColor: Color, scaleFactor: Float) {
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "RadialPulse")
     val radius by infiniteTransition.animateFloat(
         initialValue = 150f,
         targetValue = 450f,
         animationSpec = infiniteRepeatable(
             animation = tween(6000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
-        )
+        ), label = "Radius"
     )
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.2f,
@@ -301,7 +297,7 @@ fun PulsatingRadialBackground(baseColor: Color, scaleFactor: Float) {
         animationSpec = infiniteRepeatable(
             animation = tween(6000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
-        )
+        ), label = "Alpha"
     )
 
     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -324,7 +320,7 @@ fun PulsatingRadialBackground(baseColor: Color, scaleFactor: Float) {
 
 @Composable
 fun FloatingParticles(particles: List<Particle>, baseColor: Color) {
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "Particles")
 
     val animatedParticles = particles.map { particle ->
         val animatedY = infiniteTransition.animateFloat(
@@ -333,7 +329,7 @@ fun FloatingParticles(particles: List<Particle>, baseColor: Color) {
             animationSpec = infiniteRepeatable(
                 animation = tween((4000 / particle.speed).toInt(), easing = LinearEasing),
                 repeatMode = RepeatMode.Restart
-            )
+            ), label = "Y"
         )
         val animatedX = infiniteTransition.animateFloat(
             initialValue = particle.offset.x,
@@ -341,7 +337,7 @@ fun FloatingParticles(particles: List<Particle>, baseColor: Color) {
             animationSpec = infiniteRepeatable(
                 animation = tween((5000 / particle.speed).toInt(), easing = LinearEasing),
                 repeatMode = RepeatMode.Reverse
-            )
+            ), label = "X"
         )
         val animatedAlpha = infiniteTransition.animateFloat(
             initialValue = 0.2f,
@@ -349,7 +345,7 @@ fun FloatingParticles(particles: List<Particle>, baseColor: Color) {
             animationSpec = infiniteRepeatable(
                 animation = tween(3000, easing = FastOutSlowInEasing),
                 repeatMode = RepeatMode.Reverse
-            )
+            ), label = "Alpha"
         )
         val animatedSize = infiniteTransition.animateFloat(
             initialValue = particle.size,
@@ -357,7 +353,7 @@ fun FloatingParticles(particles: List<Particle>, baseColor: Color) {
             animationSpec = infiniteRepeatable(
                 animation = tween(2500, easing = FastOutSlowInEasing),
                 repeatMode = RepeatMode.Reverse
-            )
+            ), label = "Size"
         )
 
         Triple(animatedX, animatedY, Pair(animatedSize, animatedAlpha))

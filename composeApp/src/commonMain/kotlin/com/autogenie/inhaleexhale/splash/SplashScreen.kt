@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
@@ -53,7 +54,7 @@ fun SplashScreen(onFinished: () -> Unit) {
     val primaryColor = MaterialTheme.colorScheme.primary
 
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(1200)
+        delay(1200)
         fadeOut = true
     }
 

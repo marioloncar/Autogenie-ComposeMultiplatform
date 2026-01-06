@@ -12,17 +12,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Book
@@ -40,6 +39,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.autogenie.inhaleexhale.AppContainer
@@ -67,7 +68,8 @@ fun HomeScreen(
     onCategoryClick: (Category) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val scrollState = rememberScrollState()
+
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     val primaryColor = uiState.trainings.firstOrNull()?.color?.toColor()
         ?: MaterialTheme.colorScheme.primary
@@ -76,41 +78,59 @@ fun HomeScreen(
         AmbientBackground(primaryColor = primaryColor)
 
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = Color.Transparent,
             topBar = {
                 MinimalFloatingTopBar(
                     title = "Inhale - Exhale",
-                    onSettingsClick = onSettingsClick
+                    onSettingsClick = onSettingsClick,
+                    scrollBehavior = scrollBehavior
                 )
             }
         ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(
+                    top = paddingValues.calculateTopPadding() + 16.dp,
+                    bottom = 32.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize()
             ) {
-                FloatingGetStartedAction(primaryColor = primaryColor, onClick = onGetStartedClick)
 
-                MoodGoalSelectionRow(
-                    categories = uiState.moodCategories,
-                    selectedCategory = uiState.selectedCategory,
-                    onCategoryClick = onCategoryClick
-                )
+                item(span = { GridItemSpan(2) }) {
+                    FloatingGetStartedAction(
+                        primaryColor = primaryColor,
+                        onClick = onGetStartedClick
+                    )
+                }
 
-                SectionTitle(title = "Breathing Flow", modifier = Modifier.padding(top = 16.dp))
+                item(span = { GridItemSpan(2) }) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        MoodGoalSelectionRow(
+                            categories = uiState.moodCategories,
+                            selectedCategory = uiState.selectedCategory,
+                            onCategoryClick = onCategoryClick
+                        )
 
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 1000.dp)
-                ) {
-                    items(uiState.trainings) { training ->
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        SectionTitle(title = "Breathing Flow")
+                    }
+                }
+
+                items(uiState.trainings) { training ->
+                    val index = uiState.trainings.indexOf(training)
+                    val isLeftColumn = index % 2 == 0
+
+                    Box(
+                        modifier = Modifier.padding(
+                            start = if (isLeftColumn) 20.dp else 8.dp,
+                            end = if (isLeftColumn) 8.dp else 20.dp
+                        )
+                    ) {
                         FlowExerciseCard(
                             title = training.training.name,
                             description = training.training.summary,
@@ -119,8 +139,6 @@ fun HomeScreen(
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -213,7 +231,11 @@ fun MoodGoalSelectionRow(
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun MinimalFloatingTopBar(title: String, onSettingsClick: () -> Unit) {
+fun MinimalFloatingTopBar(
+    title: String,
+    onSettingsClick: () -> Unit,
+    scrollBehavior: TopAppBarScrollBehavior
+) {
     TopAppBar(
         title = {
             Text(
@@ -234,8 +256,9 @@ fun MinimalFloatingTopBar(title: String, onSettingsClick: () -> Unit) {
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = Color.Transparent,
-            scrolledContainerColor = Color.Transparent
-        )
+            scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+        ),
+        scrollBehavior = scrollBehavior
     )
 }
 
